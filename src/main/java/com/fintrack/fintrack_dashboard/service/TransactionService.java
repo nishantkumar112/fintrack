@@ -79,7 +79,7 @@ public class TransactionService {
             transactions = transactionRepository.findAll(
                     TransactionSpecification.getTransactions(filter)
                             .and((root, query, cb) ->
-                                    cb.equal(root.get("createdBy").get("id"), user.getId())),
+                                    cb.equal(root.get("user").get("id"), user.getId())),
                     pageable
             );
         }

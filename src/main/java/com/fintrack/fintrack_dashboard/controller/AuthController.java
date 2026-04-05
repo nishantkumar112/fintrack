@@ -1,21 +1,26 @@
 package com.fintrack.fintrack_dashboard.controller;
 
 import com.fintrack.fintrack_dashboard.dto.auth.*;
+import com.fintrack.fintrack_dashboard.dto.user.UserResponse;
+import com.fintrack.fintrack_dashboard.entity.User;
+import com.fintrack.fintrack_dashboard.mapper.UserMapper;
 import com.fintrack.fintrack_dashboard.service.AuthService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final AuthService authService;
-    private final PasswordEncoder passwordEncoder;
-    public AuthController(AuthService authService, PasswordEncoder passwordEncoder) {
+    private final UserMapper userMapper;
+
+    public AuthController(AuthService authService, UserMapper userMapper) {
         this.authService = authService;
-        this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
     // ============================
@@ -32,5 +37,17 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    /**
+     * Current user from JWT (principal set by {@link com.fintrack.fintrack_dashboard.security.JwtFilter}).
+     */
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> me() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userMapper.toResponse(user));
     }
 }

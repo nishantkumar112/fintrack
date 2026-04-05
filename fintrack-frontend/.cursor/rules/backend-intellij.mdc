@@ -1,0 +1,8 @@
+---
+description: Spring Boot backend is run in IntelliJ, not from Cursor
+alwaysApply: true
+---
+
+- Do **not** start the `fintrack-dashboard` Spring Boot app from Cursor (no `./mvnw spring-boot:run`, no background Java server) unless the user explicitly asks.
+- The user runs the backend from **IntelliJ IDEA**. Starting it here can conflict with port **8080** and duplicate instances.
+- Frontend work may assume the API is at `http://localhost:8080` via the Vite dev proxy at `/api`.

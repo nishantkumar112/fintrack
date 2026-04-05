@@ -11,10 +11,7 @@ import com.fintrack.fintrack_dashboard.exception.BadRequestException;
 import com.fintrack.fintrack_dashboard.mapper.TransactionMapper;
 import com.fintrack.fintrack_dashboard.respository.TransactionRepository;
 import com.fintrack.fintrack_dashboard.utils.SecurityUtils;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -36,49 +33,70 @@ public class AnalyticsService {
         this.transactionMapper = transactionMapper;
     }
 
+    private Long getScopeUserId(User user) {
+        if (securityUtils.isEmployee(user)) {
+            return user.getId();
+        }
+        return null;
+    }
+
     public DashboardSummaryResponse getSummary(LocalDate startDate, LocalDate endDate) {
+
         User user = securityUtils.getCurrentUser();
         validateDateRange(startDate, endDate);
 
-        Long scopeId = securityUtils.isAdmin(user) ? null : user.getId();
+        Long scopeId = getScopeUserId(user);
+
         Double income = transactionRepository.getTotalIncome(scopeId, startDate, endDate);
         Double expense = transactionRepository.getTotalExpense(scopeId, startDate, endDate);
 
         DashboardSummaryResponse response = new DashboardSummaryResponse();
-        response.setTotalIncome(income);
-        response.setTotalExpense(expense);
-        response.setNetBalance(income - expense);
+        response.setTotalIncome(defaultZero(income));
+        response.setTotalExpense(defaultZero(expense));
+        response.setNetBalance(defaultZero(income) - defaultZero(expense));
+
         return response;
     }
 
     public List<CategorySummaryResponse> getCategorySummary(LocalDate startDate, LocalDate endDate) {
+
         User user = securityUtils.getCurrentUser();
         validateDateRange(startDate, endDate);
 
-        Long scopeId = securityUtils.isAdmin(user) ? null : user.getId();
-        return transactionRepository.getCategorySummary(scopeId, startDate, endDate).stream()
+        Long scopeId = getScopeUserId(user);
+
+        return transactionRepository.getCategorySummary(scopeId, startDate, endDate)
+                .stream()
                 .map(this::mapCategoryRow)
                 .toList();
     }
 
     public List<MonthlyTrendResponse> getMonthlyTrends(LocalDate startDate, LocalDate endDate) {
+
         User user = securityUtils.getCurrentUser();
         validateDateRange(startDate, endDate);
 
-        Long scopeId = securityUtils.isAdmin(user) ? null : user.getId();
-        return transactionRepository.getMonthlyTrends(scopeId, startDate, endDate).stream()
+        Long scopeId = getScopeUserId(user);
+
+        return transactionRepository.getMonthlyTrends(scopeId, startDate, endDate)
+                .stream()
                 .map(this::mapTrendRow)
                 .toList();
     }
 
     public Page<TransactionResponse> getRecentTransactions(int page, int size) {
+
         User user = securityUtils.getCurrentUser();
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("date").descending());
 
-        Page<Transaction> transactions =
-                securityUtils.isAdmin(user)
-                        ? transactionRepository.findAll(pageable)
-                        : transactionRepository.findByUserId(user.getId(), pageable);
+        Page<Transaction> transactions;
+
+        if (securityUtils.isEmployee(user)) {
+            transactions = transactionRepository.findByUserId(user.getId(), pageable);
+        } else {
+            transactions = transactionRepository.findAll(pageable);
+        }
 
         return transactions.map(transactionMapper::toResponse);
     }
@@ -86,30 +104,34 @@ public class AnalyticsService {
     private CategorySummaryResponse mapCategoryRow(Object[] row) {
         CategorySummaryResponse res = new CategorySummaryResponse();
         res.setCategory((String) row[0]);
+
         if (row[1] instanceof RecordType rt) {
             res.setType(rt);
         }
+
         res.setTotal(toDouble(row[2]));
         return res;
     }
 
     private MonthlyTrendResponse mapTrendRow(Object[] row) {
-        int y = ((Number) row[0]).intValue();
-        int m = ((Number) row[1]).intValue();
+        int year = ((Number) row[0]).intValue();
+        int month = ((Number) row[1]).intValue();
+
         MonthlyTrendResponse res = new MonthlyTrendResponse();
-        res.setMonth(String.format("%d-%02d", y, m));
+        res.setMonth(String.format("%d-%02d", year, month));
         res.setTotalIncome(toDouble(row[2]));
         res.setTotalExpense(toDouble(row[3]));
+
         return res;
     }
 
+    private static double defaultZero(Double value) {
+        return value == null ? 0d : value;
+    }
+
     private static double toDouble(Object value) {
-        if (value == null) {
-            return 0d;
-        }
-        if (value instanceof Number n) {
-            return n.doubleValue();
-        }
+        if (value == null) return 0d;
+        if (value instanceof Number n) return n.doubleValue();
         return 0d;
     }
 

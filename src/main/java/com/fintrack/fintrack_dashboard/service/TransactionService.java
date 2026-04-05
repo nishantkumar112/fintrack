@@ -4,11 +4,11 @@ import com.fintrack.fintrack_dashboard.constant.TransactionStatus;
 import com.fintrack.fintrack_dashboard.dto.transaction.*;
 import com.fintrack.fintrack_dashboard.entity.Transaction;
 import com.fintrack.fintrack_dashboard.entity.User;
+import com.fintrack.fintrack_dashboard.exception.ResourceNotFoundException;
 import com.fintrack.fintrack_dashboard.mapper.TransactionMapper;
 import com.fintrack.fintrack_dashboard.respository.TransactionRepository;
 import com.fintrack.fintrack_dashboard.utils.SecurityUtils;
 import com.fintrack.fintrack_dashboard.utils.TransactionValidator;
-import com.fintrack.fintrack_dashboard.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.*;
@@ -34,59 +34,54 @@ public class TransactionService {
         this.validator = validator;
     }
 
+    // ---------------- CREATE ----------------
     public TransactionResponse createTransaction(CreateTransactionRequest request) {
 
         User user = securityUtils.getCurrentUser();
 
-        log.info("Creating transaction for userId: {}", user.getId());
+        log.info("Creating transaction | userId: {}", user.getId());
 
         Transaction transaction = transactionMapper.toEntity(request);
-
         transaction.setUser(user);
         transaction.setStatus(TransactionStatus.PENDING);
 
-        Transaction saved = transactionRepository.save(transaction);
-
-        log.info("Transaction created with id: {}", saved.getId());
-
-        return transactionMapper.toResponse(saved);
+        return transactionMapper.toResponse(
+                transactionRepository.save(transaction)
+        );
     }
 
+    // ---------------- READ ALL (RBAC CORE LOGIC) ----------------
     public Page<TransactionResponse> getTransactions(TransactionFilterRequest filter,
                                                      int page,
                                                      int size) {
 
         User user = securityUtils.getCurrentUser();
 
-        log.info("Fetching transactions | userId: {}, filter: {}", user.getId(), filter);
+        log.info("Fetching transactions | userId: {}, role-based filtering applied", user.getId());
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("date").descending());
 
-        Page<Transaction> transactions;
+        var baseSpec = TransactionSpecification.getTransactions(filter);
 
-        if (securityUtils.isAdmin(user) || securityUtils.isManager(user)) {
-            transactions = transactionRepository.findAll(
-                    TransactionSpecification.getTransactions(filter),
-                    pageable
-            );
-        } else {
-            transactions = transactionRepository.findAll(
-                    TransactionSpecification.getTransactions(filter)
-                            .and((root, query, cb) ->
-                                    cb.equal(root.get("user").get("id"), user.getId())),
-                    pageable
+        // EMPLOYEE → restrict to own data
+        if (securityUtils.isEmployee(user)) {
+            baseSpec = baseSpec.and((root, query, cb) ->
+                    cb.equal(root.get("user").get("id"), user.getId())
             );
         }
+
+        Page<Transaction> transactions = transactionRepository.findAll(baseSpec, pageable);
 
         return transactions.map(transactionMapper::toResponse);
     }
 
     public TransactionResponse getTransactionById(Long id) {
 
-        log.info("Fetching transaction id: {}", id);
+        User user = securityUtils.getCurrentUser();
 
         Transaction transaction = getTransactionOrThrow(id);
-        User user = securityUtils.getCurrentUser();
+
+        log.info("Fetching transaction id: {} by userId: {}", id, user.getId());
 
         validator.validateOwnership(transaction, user, securityUtils.isAdmin(user));
 
@@ -96,10 +91,11 @@ public class TransactionService {
     public TransactionResponse updateTransaction(Long id,
                                                  CreateTransactionRequest request) {
 
-        log.info("Updating transaction id: {}", id);
+        User user = securityUtils.getCurrentUser();
 
         Transaction transaction = getTransactionOrThrow(id);
-        User user = securityUtils.getCurrentUser();
+
+        log.info("Updating transaction id: {} by userId: {}", id, user.getId());
 
         validator.validateOwnership(transaction, user, securityUtils.isAdmin(user));
         validator.validatePending(transaction);
@@ -113,10 +109,11 @@ public class TransactionService {
 
     public void deleteTransaction(Long id) {
 
-        log.warn("Deleting transaction id: {}", id);
+        User user = securityUtils.getCurrentUser();
 
         Transaction transaction = getTransactionOrThrow(id);
-        User user = securityUtils.getCurrentUser();
+
+        log.warn("Deleting transaction id: {} by userId: {}", id, user.getId());
 
         validator.validateOwnership(transaction, user, securityUtils.isAdmin(user));
         validator.validatePending(transaction);
@@ -126,10 +123,11 @@ public class TransactionService {
 
     public TransactionResponse approveTransaction(Long id) {
 
-        log.info("Approving transaction id: {}", id);
+        User user = securityUtils.getCurrentUser();
 
         Transaction transaction = getTransactionOrThrow(id);
-        User user = securityUtils.getCurrentUser();
+
+        log.info("Approving transaction id: {} by userId: {}", id, user.getId());
 
         validator.validateManagerOrAdmin(
                 securityUtils.isAdmin(user),
@@ -147,10 +145,11 @@ public class TransactionService {
 
     public TransactionResponse rejectTransaction(Long id) {
 
-        log.info("Rejecting transaction id: {}", id);
+        User user = securityUtils.getCurrentUser();
 
         Transaction transaction = getTransactionOrThrow(id);
-        User user = securityUtils.getCurrentUser();
+
+        log.info("Rejecting transaction id: {} by userId: {}", id, user.getId());
 
         validator.validateManagerOrAdmin(
                 securityUtils.isAdmin(user),

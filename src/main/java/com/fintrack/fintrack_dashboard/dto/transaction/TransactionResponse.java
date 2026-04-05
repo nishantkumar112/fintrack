@@ -14,5 +14,5 @@ public class TransactionResponse {
     private String category;
     private String description;
     private TransactionStatus status;
-    private LocalDate date;
+    private LocalDate transactionDate;
 }

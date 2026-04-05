@@ -1,7 +1,6 @@
 package com.fintrack.fintrack_dashboard.mapper;
 
 import com.fintrack.fintrack_dashboard.entity.Transaction;
-import com.fintrack.fintrack_dashboard.constant.TransactionStatus;
 import com.fintrack.fintrack_dashboard.dto.transaction.CreateTransactionRequest;
 import com.fintrack.fintrack_dashboard.dto.transaction.TransactionResponse;
 import org.springframework.stereotype.Component;
@@ -17,7 +16,7 @@ public class TransactionMapper {
         transaction.setType(request.getType());
         transaction.setCategory(request.getCategory());
         transaction.setDescription(request.getDescription());
-        transaction.setDate(request.getDate());
+        transaction.setDate(request.getTransactionDate());
 
         return transaction;
     }
@@ -31,7 +30,7 @@ public class TransactionMapper {
         response.setType(transaction.getType());
         response.setCategory(transaction.getCategory());
         response.setDescription(transaction.getDescription());
-        response.setDate(transaction.getDate());
+        response.setTransactionDate(transaction.getDate());
         response.setStatus(transaction.getStatus());
 
         return response;
@@ -44,6 +43,6 @@ public class TransactionMapper {
         transaction.setType(request.getType());
         transaction.setCategory(request.getCategory());
         transaction.setDescription(request.getDescription());
-        transaction.setDate(request.getDate());
+        transaction.setDate(request.getTransactionDate());
     }
 }

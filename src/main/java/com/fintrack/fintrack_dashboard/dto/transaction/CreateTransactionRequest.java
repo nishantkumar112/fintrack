@@ -11,5 +11,5 @@ public class CreateTransactionRequest {
     private RecordType type;
     private String category;
     private String description;
-    private LocalDate date;
+    private LocalDate transactionDate;
 }

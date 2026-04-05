@@ -28,4 +28,8 @@ public class SecurityUtils {
     public boolean isManager(User user) {
         return user.getRole() == Role.MANAGER;
     }
+
+    public boolean isEmployee(User user) {
+        return user.getRole() == Role.EMPLOYEE;
+    }
 }

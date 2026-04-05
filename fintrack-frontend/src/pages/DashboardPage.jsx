@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LineChart,
   Line,
@@ -41,6 +41,9 @@ const StatCard = ({ title, value, accent }) => (
 
 const DashboardPage = () => {
   const { error: showError } = useToast();
+  const showErrorRef = useRef(showError);
+  showErrorRef.current = showError;
+
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(null);
   const [trend, setTrend] = useState([]);
@@ -48,7 +51,7 @@ const DashboardPage = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
+    (async () => {
       setLoading(true);
       try {
         const [sRes, tRes, cRes] = await Promise.all([
@@ -59,34 +62,36 @@ const DashboardPage = () => {
         if (cancelled) return;
         setSummary(normalizeSummary(sRes.data));
         setTrend(normalizeTrendData(tRes.data));
-        const cats = normalizeCategoryData(cRes.data).filter(
+        const normalized = normalizeCategoryData(cRes.data);
+        const expenses = normalized.filter(
           (x) => !x.type || String(x.type).toUpperCase() === "EXPENSE"
         );
-        setCategories(cats.length ? cats : normalizeCategoryData(cRes.data));
+        setCategories(expenses.length ? expenses : normalized);
       } catch {
-        if (!cancelled) showError("Could not load analytics");
+        if (!cancelled) showErrorRef.current("Could not load analytics");
       } finally {
         if (!cancelled) setLoading(false);
       }
-    };
-    load();
+    })();
     return () => {
       cancelled = true;
     };
-  }, [showError]);
+  }, []);
 
   if (loading) {
     return <Loader fullPage label="Loading dashboard" />;
   }
 
-  const expensePie = categories.filter((c) => !c.type || c.type === "EXPENSE");
+  const expensePie = categories.filter(
+    (c) => !c.type || String(c.type).toUpperCase() === "EXPENSE"
+  );
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Income, spending, and category insights.
+          Income, spending, and expense categories.
         </p>
       </div>
 
@@ -113,7 +118,7 @@ const DashboardPage = () => {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             Monthly trends
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Income vs expense</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Income vs expense by month</p>
           <div className="mt-4 h-72 w-full">
             {trend.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
@@ -140,10 +145,10 @@ const DashboardPage = () => {
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Category breakdown
+            Expenses by category
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Share of totals (expense-focused when type is present)
+            Totals grouped by category (EXPENSE only)
           </p>
           <div className="mt-4 h-72 w-full">
             {expensePie.length === 0 ? (

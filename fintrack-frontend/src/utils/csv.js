@@ -6,24 +6,17 @@ const escapeCell = (value) => {
 
 export const downloadTransactionsCsv = (rows, filename = "transactions.csv") => {
   if (!rows?.length) return;
-  const headers = [
-    "id",
-    "type",
-    "amount",
-    "category",
-    "status",
-    "description",
-    "transactionDate",
-  ];
+  const headers = ["id", "type", "amount", "category", "status", "description", "date"];
   const lines = [
     headers.join(","),
     ...rows.map((row) =>
-      headers.map((h) => escapeCell(row[h])).join(",")
+      headers.map((h) => {
+        const v = h === "date" ? (row.date ?? row.transactionDate) : row[h];
+        return escapeCell(v);
+      }).join(",")
     ),
   ];
-  const blob = new Blob([lines.join("\n")], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

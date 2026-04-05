@@ -113,9 +113,10 @@ const TransactionsPage = () => {
       amount: row.amount != null ? String(row.amount) : "",
       category: row.category || "",
       description: row.description || "",
-      transactionDate: row.transactionDate
-        ? String(row.transactionDate).slice(0, 10)
-        : new Date().toISOString().slice(0, 10),
+      transactionDate: (() => {
+        const d = row.date ?? row.transactionDate;
+        return d ? String(d).slice(0, 10) : new Date().toISOString().slice(0, 10);
+      })(),
     });
     setModalOpen(true);
   };
@@ -141,7 +142,7 @@ const TransactionsPage = () => {
       amount,
       category: form.category.trim(),
       description: form.description.trim() || undefined,
-      transactionDate: form.transactionDate || undefined,
+      date: form.transactionDate || undefined,
     };
     setSaving(true);
     try {
@@ -223,9 +224,9 @@ const TransactionsPage = () => {
 
   const columns = [
       {
-        key: "transactionDate",
+        key: "date",
         header: "Date",
-        render: (r) => formatDate(r.transactionDate || r.date),
+        render: (r) => formatDate(r.date ?? r.transactionDate),
       },
       { key: "type", header: "Type" },
       {

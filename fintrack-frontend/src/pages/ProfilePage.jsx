@@ -7,8 +7,7 @@ const ProfilePage = () => {
 
   const rows = [
     { label: "Email", value: user?.email || "—" },
-    { label: "First name", value: user?.firstName || "—" },
-    { label: "Last name", value: user?.lastName || "—" },
+    { label: "Name", value: user?.name || "—" },
     { label: "Role", value: role },
     { label: "User ID", value: user?.id != null ? String(user.id) : "—" },
   ];
@@ -17,11 +16,7 @@ const ProfilePage = () => {
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Profile</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Information from your session. Update flows can be wired to{" "}
-          <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">PUT /users/&#123;id&#125;</code>{" "}
-          when the backend exposes self-service edits.
-        </p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Details from your account session.</p>
       </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <dl className="divide-y divide-slate-100 dark:divide-slate-800">

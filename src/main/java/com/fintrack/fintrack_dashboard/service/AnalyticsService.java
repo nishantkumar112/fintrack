@@ -1,16 +1,20 @@
 package com.fintrack.fintrack_dashboard.service;
 
-import com.fintrack.fintrack_dashboard.dto.dashboard.*;
+import com.fintrack.fintrack_dashboard.constant.RecordType;
+import com.fintrack.fintrack_dashboard.dto.dashboard.CategorySummaryResponse;
+import com.fintrack.fintrack_dashboard.dto.dashboard.DashboardSummaryResponse;
+import com.fintrack.fintrack_dashboard.dto.dashboard.MonthlyTrendResponse;
 import com.fintrack.fintrack_dashboard.dto.transaction.TransactionResponse;
 import com.fintrack.fintrack_dashboard.entity.Transaction;
 import com.fintrack.fintrack_dashboard.entity.User;
+import com.fintrack.fintrack_dashboard.exception.BadRequestException;
 import com.fintrack.fintrack_dashboard.mapper.TransactionMapper;
 import com.fintrack.fintrack_dashboard.respository.TransactionRepository;
 import com.fintrack.fintrack_dashboard.utils.SecurityUtils;
-import com.fintrack.fintrack_dashboard.exception.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,129 +23,98 @@ import java.util.List;
 @Service
 public class AnalyticsService {
 
-    private static final Logger log = LoggerFactory.getLogger(AnalyticsService.class);
-
     private final TransactionRepository transactionRepository;
     private final SecurityUtils securityUtils;
     private final TransactionMapper transactionMapper;
 
-    public AnalyticsService(TransactionRepository transactionRepository,
-                            SecurityUtils securityUtils,
-                            TransactionMapper transactionMapper) {
+    public AnalyticsService(
+            TransactionRepository transactionRepository,
+            SecurityUtils securityUtils,
+            TransactionMapper transactionMapper) {
         this.transactionRepository = transactionRepository;
         this.securityUtils = securityUtils;
         this.transactionMapper = transactionMapper;
     }
 
-    // ============================
-    // SUMMARY (FILTER + ADMIN SUPPORT)
-    // ============================
     public DashboardSummaryResponse getSummary(LocalDate startDate, LocalDate endDate) {
-
         User user = securityUtils.getCurrentUser();
-
-        log.info("Fetching summary | userId: {}, startDate: {}, endDate: {}",
-                user.getId(), startDate, endDate);
-
         validateDateRange(startDate, endDate);
 
-        Double income;
-        Double expense;
-
-        if (securityUtils.isAdmin(user)) {
-            income = transactionRepository.getTotalIncome(null, startDate, endDate);
-            expense = transactionRepository.getTotalExpense(null, startDate, endDate);
-        } else {
-            income = transactionRepository.getTotalIncome(user.getId(), startDate, endDate);
-            expense = transactionRepository.getTotalExpense(user.getId(), startDate, endDate);
-        }
+        Long scopeId = securityUtils.isAdmin(user) ? null : user.getId();
+        Double income = transactionRepository.getTotalIncome(scopeId, startDate, endDate);
+        Double expense = transactionRepository.getTotalExpense(scopeId, startDate, endDate);
 
         DashboardSummaryResponse response = new DashboardSummaryResponse();
         response.setTotalIncome(income);
         response.setTotalExpense(expense);
         response.setNetBalance(income - expense);
-
         return response;
     }
 
-    // ============================
-    // CATEGORY SUMMARY (FILTERED)
-    // ============================
-    public List<CategorySummaryResponse> getCategorySummary(LocalDate startDate,
-                                                            LocalDate endDate) {
-
+    public List<CategorySummaryResponse> getCategorySummary(LocalDate startDate, LocalDate endDate) {
         User user = securityUtils.getCurrentUser();
-
-        log.info("Fetching category summary | userId: {}", user.getId());
-
         validateDateRange(startDate, endDate);
 
-        List<Object[]> result = transactionRepository.getCategorySummary(user.getId());
-
-        return result.stream()
-                .map(obj -> {
-                    CategorySummaryResponse res = new CategorySummaryResponse();
-                    res.setCategory((String) obj[0]);
-                    res.setTotal((Double) obj[1]);
-                    return res;
-                })
+        Long scopeId = securityUtils.isAdmin(user) ? null : user.getId();
+        return transactionRepository.getCategorySummary(scopeId, startDate, endDate).stream()
+                .map(this::mapCategoryRow)
                 .toList();
     }
 
-    // ============================
-    // MONTHLY TREND (FILTERED)
-    // ============================
-    public List<MonthlyTrendResponse> getMonthlyTrends(LocalDate startDate,
-                                                       LocalDate endDate) {
-
+    public List<MonthlyTrendResponse> getMonthlyTrends(LocalDate startDate, LocalDate endDate) {
         User user = securityUtils.getCurrentUser();
-
-        log.info("Fetching trends | userId: {}", user.getId());
-
         validateDateRange(startDate, endDate);
 
-        return transactionRepository.getMonthlyTrends(user.getId())
-                .stream()
-                .map(obj -> {
-                    MonthlyTrendResponse res = new MonthlyTrendResponse();
-                    res.setMonth((String) obj[0]);
-                    res.setTotalIncome((Double) obj[1]);
-                    res.setTotalExpense((Double) obj[2]);
-                    return res;
-                })
+        Long scopeId = securityUtils.isAdmin(user) ? null : user.getId();
+        return transactionRepository.getMonthlyTrends(scopeId, startDate, endDate).stream()
+                .map(this::mapTrendRow)
                 .toList();
     }
 
-    // ============================
-    // RECENT (PAGINATION)
-    // ============================
     public Page<TransactionResponse> getRecentTransactions(int page, int size) {
-
         User user = securityUtils.getCurrentUser();
-
-        log.info("Fetching recent transactions | userId: {}, page: {}, size: {}",
-                user.getId(), page, size);
-
         Pageable pageable = PageRequest.of(page, size, Sort.by("date").descending());
 
-        Page<Transaction> transactions;
-
-        if (securityUtils.isAdmin(user)) {
-            transactions = transactionRepository.findAll(pageable);
-        } else {
-            transactions = transactionRepository.findByUserId(user.getId(), pageable);
-        }
+        Page<Transaction> transactions =
+                securityUtils.isAdmin(user)
+                        ? transactionRepository.findAll(pageable)
+                        : transactionRepository.findByUserId(user.getId(), pageable);
 
         return transactions.map(transactionMapper::toResponse);
     }
 
-    // ============================
-    // VALIDATION
-    // ============================
-    private void validateDateRange(LocalDate start, LocalDate end) {
+    private CategorySummaryResponse mapCategoryRow(Object[] row) {
+        CategorySummaryResponse res = new CategorySummaryResponse();
+        res.setCategory((String) row[0]);
+        if (row[1] instanceof RecordType rt) {
+            res.setType(rt);
+        }
+        res.setTotal(toDouble(row[2]));
+        return res;
+    }
 
+    private MonthlyTrendResponse mapTrendRow(Object[] row) {
+        int y = ((Number) row[0]).intValue();
+        int m = ((Number) row[1]).intValue();
+        MonthlyTrendResponse res = new MonthlyTrendResponse();
+        res.setMonth(String.format("%d-%02d", y, m));
+        res.setTotalIncome(toDouble(row[2]));
+        res.setTotalExpense(toDouble(row[3]));
+        return res;
+    }
+
+    private static double toDouble(Object value) {
+        if (value == null) {
+            return 0d;
+        }
+        if (value instanceof Number n) {
+            return n.doubleValue();
+        }
+        return 0d;
+    }
+
+    private void validateDateRange(LocalDate start, LocalDate end) {
         if (start != null && end != null && start.isAfter(end)) {
-            log.warn("Invalid date range | start: {}, end: {}", start, end);
             throw new BadRequestException("Start date cannot be after end date");
         }
     }

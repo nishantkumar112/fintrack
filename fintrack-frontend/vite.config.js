@@ -10,7 +10,6 @@ const createApiProxy = (target, stripApiPrefix) => {
     target,
     changeOrigin: true,
     secure: false,
-    // Forward browser preflight (OPTIONS) and JSON + Authorization to Spring.
     ws: true,
   };
 
@@ -30,7 +29,6 @@ const createApiProxy = (target, stripApiPrefix) => {
   };
 };
 
-// https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, "");
   const proxyTarget =

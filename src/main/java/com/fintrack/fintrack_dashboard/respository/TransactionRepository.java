@@ -35,23 +35,31 @@ WHERE t.type = 'EXPENSE'
     Double getTotalExpense(Long userId, LocalDate startDate, LocalDate endDate);
 
     @Query("""
-    SELECT t.category, SUM(t.amount)
-    FROM Transaction t
-    WHERE t.user.id = :userId
-    GROUP BY t.category
-""")
-    List<Object[]> getCategorySummary(Long userId);
+            SELECT COALESCE(NULLIF(TRIM(t.category), ''), 'Uncategorized'), t.type,
+                   COALESCE(SUM(t.amount), 0)
+            FROM Transaction t
+            WHERE (:userId IS NULL OR t.user.id = :userId)
+              AND (CAST(:startDate AS date) IS NULL OR t.date >= :startDate)
+              AND (CAST(:endDate AS date) IS NULL OR t.date <= :endDate)
+            GROUP BY COALESCE(NULLIF(TRIM(t.category), ''), 'Uncategorized'), t.type
+            ORDER BY t.type, SUM(t.amount) DESC
+            """)
+    List<Object[]> getCategorySummary(Long userId, LocalDate startDate, LocalDate endDate);
 
     @Query("""
-    SELECT FUNCTION('TO_CHAR', t.date, 'YYYY-MM'),
-           SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END),
-           SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END)
-    FROM Transaction t
-    WHERE t.user.id = :userId
-    GROUP BY FUNCTION('TO_CHAR', t.date, 'YYYY-MM')
-    ORDER BY 1
-""")
-    List<Object[]> getMonthlyTrends(Long userId);
+            SELECT YEAR(t.date), MONTH(t.date),
+                   COALESCE(SUM(CASE WHEN t.type = com.fintrack.fintrack_dashboard.constant.RecordType.INCOME
+                       THEN t.amount ELSE 0 END), 0),
+                   COALESCE(SUM(CASE WHEN t.type = com.fintrack.fintrack_dashboard.constant.RecordType.EXPENSE
+                       THEN t.amount ELSE 0 END), 0)
+            FROM Transaction t
+            WHERE (:userId IS NULL OR t.user.id = :userId)
+              AND (CAST(:startDate AS date) IS NULL OR t.date >= :startDate)
+              AND (CAST(:endDate AS date) IS NULL OR t.date <= :endDate)
+            GROUP BY YEAR(t.date), MONTH(t.date)
+            ORDER BY YEAR(t.date), MONTH(t.date)
+            """)
+    List<Object[]> getMonthlyTrends(Long userId, LocalDate startDate, LocalDate endDate);
 
     List<Transaction> findTop5ByUserIdOrderByDateDesc(Long userId);
 }

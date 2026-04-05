@@ -34,9 +34,6 @@ public class TransactionService {
         this.validator = validator;
     }
 
-    // ============================
-    // CREATE
-    // ============================
     public TransactionResponse createTransaction(CreateTransactionRequest request) {
 
         User user = securityUtils.getCurrentUser();
@@ -55,9 +52,6 @@ public class TransactionService {
         return transactionMapper.toResponse(saved);
     }
 
-    // ============================
-    // GET (FILTER + PAGINATION)
-    // ============================
     public Page<TransactionResponse> getTransactions(TransactionFilterRequest filter,
                                                      int page,
                                                      int size) {
@@ -70,7 +64,7 @@ public class TransactionService {
 
         Page<Transaction> transactions;
 
-        if (securityUtils.isAdmin(user)) {
+        if (securityUtils.isAdmin(user) || securityUtils.isManager(user)) {
             transactions = transactionRepository.findAll(
                     TransactionSpecification.getTransactions(filter),
                     pageable
@@ -87,9 +81,6 @@ public class TransactionService {
         return transactions.map(transactionMapper::toResponse);
     }
 
-    // ============================
-    // GET BY ID
-    // ============================
     public TransactionResponse getTransactionById(Long id) {
 
         log.info("Fetching transaction id: {}", id);
@@ -102,9 +93,6 @@ public class TransactionService {
         return transactionMapper.toResponse(transaction);
     }
 
-    // ============================
-    // UPDATE
-    // ============================
     public TransactionResponse updateTransaction(Long id,
                                                  CreateTransactionRequest request) {
 
@@ -123,9 +111,6 @@ public class TransactionService {
         );
     }
 
-    // ============================
-    // DELETE
-    // ============================
     public void deleteTransaction(Long id) {
 
         log.warn("Deleting transaction id: {}", id);
@@ -139,9 +124,6 @@ public class TransactionService {
         transactionRepository.delete(transaction);
     }
 
-    // ============================
-    // APPROVE
-    // ============================
     public TransactionResponse approveTransaction(Long id) {
 
         log.info("Approving transaction id: {}", id);
@@ -163,9 +145,6 @@ public class TransactionService {
         );
     }
 
-    // ============================
-    // REJECT
-    // ============================
     public TransactionResponse rejectTransaction(Long id) {
 
         log.info("Rejecting transaction id: {}", id);
@@ -187,9 +166,6 @@ public class TransactionService {
         );
     }
 
-    // ============================
-    // HELPER
-    // ============================
     private Transaction getTransactionOrThrow(Long id) {
         return transactionRepository.findById(id)
                 .orElseThrow(() -> {

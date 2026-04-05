@@ -15,9 +15,6 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // ============================
-    // NOT FOUND
-    // ============================
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(
             ResourceNotFoundException ex,
@@ -29,9 +26,6 @@ public class GlobalExceptionHandler {
                 .body(buildResponse(ex, HttpStatus.NOT_FOUND, request));
     }
 
-    // ============================
-    // BAD REQUEST
-    // ============================
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(
             BadRequestException ex,
@@ -43,9 +37,6 @@ public class GlobalExceptionHandler {
                 .body(buildResponse(ex, HttpStatus.BAD_REQUEST, request));
     }
 
-    // ============================
-    // FORBIDDEN
-    // ============================
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ErrorResponse> handleForbidden(
             ForbiddenException ex,
@@ -57,9 +48,6 @@ public class GlobalExceptionHandler {
                 .body(buildResponse(ex, HttpStatus.FORBIDDEN, request));
     }
 
-    // ============================
-    // GENERIC
-    // ============================
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(
             Exception ex,

@@ -24,9 +24,6 @@ public class TransactionController {
         this.transactionService = transactionService;
     }
 
-    // ============================
-    // CREATE
-    // ============================
     @PostMapping
     public ResponseEntity<TransactionResponse> create(
             @RequestBody CreateTransactionRequest request) {
@@ -36,9 +33,6 @@ public class TransactionController {
         );
     }
 
-    // ============================
-    // GET (FILTER + PAGINATION)
-    // ============================
     @GetMapping
     public ResponseEntity<Page<TransactionResponse>> getTransactions(
 
@@ -70,9 +64,6 @@ public class TransactionController {
         );
     }
 
-    // ============================
-    // GET BY ID
-    // ============================
     @GetMapping("/{id}")
     public ResponseEntity<TransactionResponse> getById(@PathVariable Long id) {
 
@@ -81,9 +72,6 @@ public class TransactionController {
         );
     }
 
-    // ============================
-    // UPDATE
-    // ============================
     @PutMapping("/{id}")
     public ResponseEntity<TransactionResponse> update(
             @PathVariable Long id,
@@ -94,9 +82,6 @@ public class TransactionController {
         );
     }
 
-    // ============================
-    // DELETE
-    // ============================
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
 
@@ -105,9 +90,6 @@ public class TransactionController {
         return ResponseEntity.noContent().build();
     }
 
-    // ============================
-    // APPROVE
-    // ============================
     @PutMapping("/{id}/approve")
     public ResponseEntity<TransactionResponse> approve(@PathVariable Long id) {
 
@@ -116,9 +98,6 @@ public class TransactionController {
         );
     }
 
-    // ============================
-    // REJECT
-    // ============================
     @PutMapping("/{id}/reject")
     public ResponseEntity<TransactionResponse> reject(@PathVariable Long id) {
 

@@ -31,10 +31,6 @@ public class UserService {
         this.userMapper = userMapper;
         this.securityUtils = securityUtils;
     }
-
-    // ============================
-    // CREATE USER
-    // ============================
     public UserResponse createUser(CreateUserRequest request) {
 
         log.info("Creating user with email: {}", request.getEmail());
@@ -54,9 +50,6 @@ public class UserService {
         return userMapper.toResponse(savedUser);
     }
 
-    // ============================
-    // GET USERS (PAGING + FILTER)
-    // ============================
     public Page<UserResponse> getUsers(UserFilterRequest filter,
                                        int page,
                                        int size,
@@ -89,9 +82,6 @@ public class UserService {
         return users.map(userMapper::toResponse);
     }
 
-    // ============================
-    // GET USER
-    // ============================
     public UserResponse getUser(Long id) {
 
         User currentUser = securityUtils.getCurrentUser();
@@ -112,9 +102,6 @@ public class UserService {
         return userMapper.toResponse(user);
     }
 
-    // ============================
-    // UPDATE USER
-    // ============================
     public UserResponse updateUser(Long id, CreateUserRequest request) {
 
         User currentUser = securityUtils.getCurrentUser();
@@ -151,9 +138,6 @@ public class UserService {
         return userMapper.toResponse(updatedUser);
     }
 
-    // ============================
-    // DELETE USER
-    // ============================
     public void deleteUser(Long id) {
 
         User currentUser = securityUtils.getCurrentUser();
@@ -172,9 +156,6 @@ public class UserService {
         log.warn("User deleted successfully | id: {}", id);
     }
 
-    // ============================
-    // CURRENT USER
-    // ============================
     public UserResponse getCurrentUser() {
 
         User user = securityUtils.getCurrentUser();
@@ -184,9 +165,6 @@ public class UserService {
         return userMapper.toResponse(user);
     }
 
-    // ============================
-    // HELPER
-    // ============================
     private User getUserOrThrow(Long id) {
 
         return userRepository.findById(id)

@@ -28,9 +28,6 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
-    // ============================
-    // SIGNUP
-    // ============================
     public AuthResponse signup(SignupRequest request) {
 
         log.info("Signup attempt for email: {}", request.getEmail());
@@ -57,9 +54,6 @@ public class AuthService {
         return new AuthResponse(token);
     }
 
-    // ============================
-    // LOGIN
-    // ============================
     public AuthResponse login(LoginRequest request) {
 
         log.info("Login attempt for email: {}", request.getEmail());
@@ -84,9 +78,6 @@ public class AuthService {
         return new AuthResponse(token);
     }
 
-    // ============================
-    // VALIDATIONS
-    // ============================
     private void validateSignupRequest(SignupRequest request) {
 
         if (request.getEmail() == null || request.getEmail().isBlank()) {

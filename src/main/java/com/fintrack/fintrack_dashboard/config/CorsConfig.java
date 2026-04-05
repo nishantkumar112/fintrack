@@ -12,13 +12,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * CORS for the React app (Vite dev on 5173, preview on 4173, etc.).
- * <p>
- * Spring Security only applies this if {@code SecurityFilterChain} enables
- * {@code http.cors(Customizer.withDefaults())}; MVC-only {@code WebMvcConfigurer}
- * is not enough for authenticated routes.
- */
 @Configuration
 public class CorsConfig {
 

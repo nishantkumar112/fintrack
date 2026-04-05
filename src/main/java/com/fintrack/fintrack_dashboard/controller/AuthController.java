@@ -23,25 +23,19 @@ public class AuthController {
         this.userMapper = userMapper;
     }
 
-    // ============================
-    // SIGNUP
-    // ============================
+
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> signup(@RequestBody SignupRequest request) {
         return ResponseEntity.ok(authService.signup(request));
     }
 
-    // ============================
-    // LOGIN
-    // ============================
+
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    /**
-     * Current user from JWT (principal set by {@link com.fintrack.fintrack_dashboard.security.JwtFilter}).
-     */
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

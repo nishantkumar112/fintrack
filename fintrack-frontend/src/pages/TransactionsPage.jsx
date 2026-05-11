@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
-import Table from "../components/Table";
-import Pagination from "../components/Pagination";
-import Modal from "../components/Modal";
-import FormInput from "../components/FormInput";
-import FormSelect from "../components/FormSelect";
-import Loader from "../components/Loader";
-import { useAuth } from "../context/AuthContext";
-import { useToast } from "../context/ToastContext";
-import { useDebounce } from "../hooks/useDebounce";
+import {useCallback, useEffect, useState} from 'react';
+import Table from '../components/Table';
+import Pagination from '../components/Pagination';
+import Modal from '../components/Modal';
+import FormInput from '../components/FormInput';
+import FormSelect from '../components/FormSelect';
+import Loader from '../components/Loader';
+import {useAuth} from '../context/AuthContext';
+import {useToast} from '../context/ToastContext';
+import {useDebounce} from '../hooks/useDebounce';
 import {
   getTransactions,
   createTransaction,
@@ -15,22 +15,22 @@ import {
   deleteTransaction,
   approveTransaction,
   rejectTransaction,
-} from "../services/transactionService";
-import { formatCurrency, formatDate } from "../utils/format";
-import { canApproveTransactions } from "../utils/rbac";
-import { downloadTransactionsCsv } from "../utils/csv";
+  exportTransaction,
+} from '../services/transactionService';
+import {formatCurrency, formatDate} from '../utils/format';
+import {canApproveTransactions} from '../utils/rbac';
 
 const emptyForm = {
-  type: "EXPENSE",
-  amount: "",
-  category: "",
-  description: "",
-  transactionDate: "",
+  type: 'EXPENSE',
+  amount: '',
+  category: '',
+  description: '',
+  transactionDate: '',
 };
 
 const TransactionsPage = () => {
-  const { user } = useAuth();
-  const { success, error: showError } = useToast();
+  const {user} = useAuth();
+  const {success, error: showError} = useToast();
   const canApprove = canApproveTransactions(user);
 
   const [items, setItems] = useState([]);
@@ -40,19 +40,19 @@ const TransactionsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
 
-  const [filterType, setFilterType] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [filterType, setFilterType] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 400);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-
+  const [exporting, setExporting] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -73,10 +73,12 @@ const TransactionsPage = () => {
       setItems(Array.isArray(content) ? content : []);
       setTotalPages(body?.totalPages ?? 1);
       setTotalElements(
-        typeof body?.totalElements === "number" ? body.totalElements : content.length
+        typeof body?.totalElements === 'number'
+          ? body.totalElements
+          : content.length,
       );
     } catch {
-      showError("Failed to load transactions");
+      showError('Failed to load transactions');
       setItems([]);
     } finally {
       setLoading(false);
@@ -109,32 +111,34 @@ const TransactionsPage = () => {
   const openEdit = (row) => {
     setEditing(row);
     setForm({
-      type: row.type || "EXPENSE",
-      amount: row.amount != null ? String(row.amount) : "",
-      category: row.category || "",
-      description: row.description || "",
+      type: row.type || 'EXPENSE',
+      amount: row.amount != null ? String(row.amount) : '',
+      category: row.category || '',
+      description: row.description || '',
       transactionDate: (() => {
         const d = row.date ?? row.transactionDate;
-        return d ? String(d).slice(0, 10) : new Date().toISOString().slice(0, 10);
+        return d
+          ? String(d).slice(0, 10)
+          : new Date().toISOString().slice(0, 10);
       })(),
     });
     setModalOpen(true);
   };
 
   const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    const {name, value} = e.target;
+    setForm((f) => ({...f, [name]: value}));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     const amount = Number(form.amount);
     if (!form.category.trim()) {
-      showError("Category is required");
+      showError('Category is required');
       return;
     }
     if (Number.isNaN(amount) || amount <= 0) {
-      showError("Enter a valid amount");
+      showError('Enter a valid amount');
       return;
     }
     const payload = {
@@ -148,10 +152,10 @@ const TransactionsPage = () => {
     try {
       if (editing?.id != null) {
         await updateTransaction(editing.id, payload);
-        success("Transaction updated");
+        success('Transaction updated');
       } else {
         await createTransaction(payload);
-        success("Transaction created");
+        success('Transaction created');
       }
       setModalOpen(false);
       await load();
@@ -159,155 +163,189 @@ const TransactionsPage = () => {
       const msg =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        "Save failed";
-      showError(typeof msg === "string" ? msg : "Save failed");
+        'Save failed';
+      showError(typeof msg === 'string' ? msg : 'Save failed');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (row) => {
-    if (!window.confirm("Delete this transaction?")) return;
+    if (!window.confirm('Delete this transaction?')) return;
     try {
       await deleteTransaction(row.id);
-      success("Transaction deleted");
+      success('Transaction deleted');
       await load();
     } catch {
-      showError("Delete failed");
+      showError('Delete failed');
     }
   };
 
   const handleApprove = async (row) => {
     try {
       await approveTransaction(row.id);
-      success("Approved");
+      success('Approved');
       await load();
     } catch {
-      showError("Approve failed");
+      showError('Approve failed');
     }
   };
 
   const handleReject = async (row) => {
     try {
       await rejectTransaction(row.id);
-      success("Rejected");
+      success('Rejected');
       await load();
     } catch {
-      showError("Reject failed");
+      showError('Reject failed');
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format) => {
+    setExporting(true);
     try {
-      const res = await getTransactions({
-        page: 0,
-        size: Math.min(totalElements || 500, 500),
-        type: filterType || undefined,
-        category: filterCategory.trim() || undefined,
-        status: filterStatus || undefined,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
-        search: debouncedSearch.trim() || undefined,
+      const response = await exportTransaction({
+        params: {
+          format,
+
+          type: filterType || undefined,
+
+          category: filterCategory.trim() || undefined,
+
+          status: filterStatus || undefined,
+
+          startDate: fromDate || undefined,
+
+          endDate: toDate || undefined,
+
+          search: debouncedSearch.trim() || undefined,
+        },
+
+        responseType: 'blob',
       });
-      const body = res.data;
-      const rows = body?.content ?? [];
-      if (!rows.length) {
-        showError("Nothing to export");
-        return;
-      }
-      downloadTransactionsCsv(rows);
-      success("CSV downloaded");
-    } catch {
-      showError("Export failed");
+
+      const extensionMap = {
+        CSV: 'csv',
+        EXCEL: 'xlsx',
+        PDF: 'pdf',
+      };
+
+      const blob = new Blob([response.data]);
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+
+      link.href = url;
+
+      link.setAttribute('download', `transactions.${extensionMap[format]}`);
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+
+      success(`${format} downloaded`);
+    } catch (error) {
+      console.error(error);
+
+      showError('Export failed');
+    } finally {
+      setExporting(true);
     }
   };
 
   const columns = [
-      {
-        key: "date",
-        header: "Date",
-        render: (r) => formatDate(r.date ?? r.transactionDate),
-      },
-      { key: "type", header: "Type" },
-      {
-        key: "amount",
-        header: "Amount",
-        render: (r) => formatCurrency(r.amount),
-      },
-      { key: "category", header: "Category" },
-      {
-        key: "status",
-        header: "Status",
-        render: (r) => (
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              r.status === "APPROVED"
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                : r.status === "REJECTED"
-                  ? "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"
-                  : "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"
-            }`}
+    {
+      key: 'date',
+      header: 'Date',
+      render: (r) => formatDate(r.date ?? r.transactionDate),
+    },
+    {key: 'type', header: 'Type'},
+    {
+      key: 'amount',
+      header: 'Amount',
+      render: (r) => formatCurrency(r.amount),
+    },
+    {key: 'category', header: 'Category'},
+    {
+      key: 'status',
+      header: 'Status',
+      render: (r) => (
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            r.status === 'APPROVED'
+              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
+              : r.status === 'REJECTED'
+                ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'
+                : 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100'
+          }`}
+        >
+          {r.status || '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      render: (r) => (
+        <span className="max-w-xs truncate block" title={r.description}>
+          {r.description || '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (r) => (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+            onClick={() => openEdit(r)}
           >
-            {r.status || "—"}
-          </span>
-        ),
-      },
-      {
-        key: "description",
-        header: "Description",
-        render: (r) => (
-          <span className="max-w-xs truncate block" title={r.description}>
-            {r.description || "—"}
-          </span>
-        ),
-      },
-      {
-        key: "actions",
-        header: "",
-        render: (r) => (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
-              onClick={() => openEdit(r)}
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400"
-              onClick={() => handleDelete(r)}
-            >
-              Delete
-            </button>
-            {canApprove && (r.status === "PENDING" || !r.status) ? (
-              <>
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
-                  onClick={() => handleApprove(r)}
-                >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-amber-700 hover:underline dark:text-amber-300"
-                  onClick={() => handleReject(r)}
-                >
-                  Reject
-                </button>
-              </>
-            ) : null}
-          </div>
-        ),
-      },
-    ];
+            Edit
+          </button>
+          <button
+            type="button"
+            className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400"
+            onClick={() => handleDelete(r)}
+          >
+            Delete
+          </button>
+          {canApprove && (r.status === 'PENDING' || !r.status) ? (
+            <>
+              <button
+                type="button"
+                className="text-xs font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
+                onClick={() => handleApprove(r)}
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                className="text-xs font-semibold text-amber-700 hover:underline dark:text-amber-300"
+                onClick={() => handleReject(r)}
+              >
+                Reject
+              </button>
+            </>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            Transactions
+          </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             Create, filter, and manage entries. Managers and admins can approve.
           </p>
@@ -317,13 +355,31 @@ const TransactionsPage = () => {
             type="button"
             onClick={handleExport}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            disabled={exporting}
           >
             Export CSV
           </button>
           <button
             type="button"
+            onClick={() => handleExport('EXCEL')}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            Export Excel
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleExport('PDF')}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            disabled={exporting}
+          >
+            Export PDF
+          </button>
+          <button
+            type="button"
             onClick={openCreate}
             className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            disabled={exporting}
           >
             New transaction
           </button>
@@ -403,7 +459,11 @@ const TransactionsPage = () => {
         <Loader label="Loading transactions" />
       ) : (
         <>
-          <Table columns={columns} data={items} emptyMessage="No transactions match your filters." />
+          <Table
+            columns={columns}
+            data={items}
+            emptyMessage="No transactions match your filters."
+          />
           <Pagination
             page={page}
             totalPages={totalPages}
@@ -421,7 +481,7 @@ const TransactionsPage = () => {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? "Edit transaction" : "New transaction"}
+        title={editing ? 'Edit transaction' : 'New transaction'}
         footer={
           <>
             <button
@@ -437,7 +497,7 @@ const TransactionsPage = () => {
               disabled={saving}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? 'Saving…' : 'Save'}
             </button>
           </>
         }

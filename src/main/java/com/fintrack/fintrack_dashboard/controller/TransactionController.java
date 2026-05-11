@@ -1,17 +1,22 @@
 package com.fintrack.fintrack_dashboard.controller;
 
+import com.fintrack.fintrack_dashboard.constant.ExportFormat;
 import com.fintrack.fintrack_dashboard.constant.RecordType;
 import com.fintrack.fintrack_dashboard.constant.TransactionStatus;
 import com.fintrack.fintrack_dashboard.dto.transaction.CreateTransactionRequest;
 import com.fintrack.fintrack_dashboard.dto.transaction.TransactionFilterRequest;
 import com.fintrack.fintrack_dashboard.dto.transaction.TransactionResponse;
 import com.fintrack.fintrack_dashboard.service.TransactionService;
+import com.fintrack.fintrack_dashboard.service.export.ExportService;
+import com.fintrack.fintrack_dashboard.service.export.TransactionExporter;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/transactions")
@@ -19,9 +24,11 @@ import java.time.LocalDate;
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final ExportService exportService;
 
-    public TransactionController(TransactionService transactionService) {
+    public TransactionController(TransactionService transactionService,ExportService exportService) {
         this.transactionService = transactionService;
+        this.exportService = exportService;
     }
 
     @PostMapping
@@ -104,5 +111,46 @@ public class TransactionController {
         return ResponseEntity.ok(
                 transactionService.rejectTransaction(id)
         );
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportTransactions(
+
+            @ModelAttribute
+            TransactionFilterRequest filter,
+
+            @RequestParam(defaultValue = "CSV")
+            ExportFormat format
+    ) {
+
+        List<TransactionResponse> transactions =
+                transactionService
+                        .getTransactions(
+                                filter,
+                                0,
+                                Integer.MAX_VALUE
+                        )
+                        .getContent();
+
+        TransactionExporter exporter =
+                exportService.getExporter(format);
+
+        byte[] data =
+                exporter.export(transactions);
+
+        String filename =
+                "transactions."
+                        + exporter.getFileExtension();
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=" + filename
+                )
+                .header(
+                        HttpHeaders.CONTENT_TYPE,
+                        exporter.getContentType()
+                )
+                .body(data);
     }
 }

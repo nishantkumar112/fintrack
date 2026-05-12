@@ -14,21 +14,19 @@ import com.fintrack.fintrack_dashboard.respository.TransactionRepository;
 import com.fintrack.fintrack_dashboard.utils.SecurityUtils;
 
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Slf4j
 public class AnalyticsService {
 
     private final TransactionRepository transactionRepository;
-
     private final SecurityUtils securityUtils;
-
     private final TransactionMapper transactionMapper;
 
     public AnalyticsService(
@@ -44,313 +42,162 @@ public class AnalyticsService {
     private Long getScopeUserId(User user) {
 
         if (securityUtils.isEmployee(user)) {
-
-            log.info(
-                    "Applying employee-level analytics restriction for userId={}",
-                    user.getId()
-            );
-
+            log.info("Employee scope applied | userId={}", user.getId());
             return user.getId();
         }
 
-        log.info(
-                "Admin-level analytics access granted for userId={}",
-                user.getId()
-        );
-
+        log.info("Admin scope applied | userId={}", user.getId());
         return null;
     }
 
-    public DashboardSummaryResponse getSummary(
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
+    public DashboardSummaryResponse getSummary(LocalDate startDate, LocalDate endDate) {
 
-        User currentUser =
-                securityUtils.getCurrentUser();
-
-        log.info(
-                "Fetching dashboard summary | userId={}, startDate={}, endDate={}",
-                currentUser.getId(),
-                startDate,
-                endDate
-        );
+        User currentUser = securityUtils.getCurrentUser();
 
         validateDateRange(startDate, endDate);
 
-        Long scopeUserId =
-                getScopeUserId(currentUser);
+        Long scopeUserId = getScopeUserId(currentUser);
 
-        Double income =
-                transactionRepository.getTotalIncome(
-                        scopeUserId,
-                        startDate,
-                        endDate
-                );
+        Double income = transactionRepository.getTotalIncome(scopeUserId, startDate, endDate);
+        Double expense = transactionRepository.getTotalExpense(scopeUserId, startDate, endDate);
 
-        Double expense =
-                transactionRepository.getTotalExpense(
-                        scopeUserId,
-                        startDate,
-                        endDate
-                );
+        double totalIncome = defaultZero(income);
+        double totalExpense = defaultZero(expense);
 
-        DashboardSummaryResponse response =
-                new DashboardSummaryResponse();
-
-        response.setTotalIncome(
-                defaultZero(income)
-        );
-
-        response.setTotalExpense(
-                defaultZero(expense)
-        );
-
-        response.setNetBalance(
-                defaultZero(income)
-                        - defaultZero(expense)
-        );
+        DashboardSummaryResponse response = new DashboardSummaryResponse();
+        response.setTotalIncome(totalIncome);
+        response.setTotalExpense(totalExpense);
+        response.setNetBalance(totalIncome - totalExpense);
 
         log.info(
-                "Dashboard summary fetched successfully | userId={}, totalIncome={}, totalExpense={}, netBalance={}",
+                "Summary generated | userId={}, income={}, expense={}, balance={}",
                 currentUser.getId(),
-                response.getTotalIncome(),
-                response.getTotalExpense(),
+                totalIncome,
+                totalExpense,
                 response.getNetBalance()
         );
 
         return response;
     }
 
-    public List<CategorySummaryResponse>
-    getCategorySummary(
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
+    public List<CategorySummaryResponse> getCategorySummary(LocalDate startDate, LocalDate endDate) {
 
-        User currentUser =
-                securityUtils.getCurrentUser();
-
-        log.info(
-                "Fetching category summary | userId={}, startDate={}, endDate={}",
-                currentUser.getId(),
-                startDate,
-                endDate
-        );
+        User currentUser = securityUtils.getCurrentUser();
 
         validateDateRange(startDate, endDate);
 
-        Long scopeUserId =
-                getScopeUserId(currentUser);
+        Long scopeUserId = getScopeUserId(currentUser);
 
         List<CategorySummaryResponse> response =
-                transactionRepository
-                        .getCategorySummary(
-                                scopeUserId,
-                                startDate,
-                                endDate
-                        )
+                transactionRepository.getCategorySummary(scopeUserId, startDate, endDate)
                         .stream()
                         .map(this::mapCategoryRow)
+                        .filter(Objects::nonNull)
                         .toList();
 
-        log.info(
-                "Category summary fetched successfully | userId={}, categoriesCount={}",
-                currentUser.getId(),
-                response.size()
-        );
+        log.info("Category summary fetched | userId={}, size={}", currentUser.getId(), response.size());
 
         return response;
     }
 
-    public List<MonthlyTrendResponse>
-    getMonthlyTrends(
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
+    public List<MonthlyTrendResponse> getMonthlyTrends(LocalDate startDate, LocalDate endDate) {
 
-        User currentUser =
-                securityUtils.getCurrentUser();
-
-        log.info(
-                "Fetching monthly trends | userId={}, startDate={}, endDate={}",
-                currentUser.getId(),
-                startDate,
-                endDate
-        );
+        User currentUser = securityUtils.getCurrentUser();
 
         validateDateRange(startDate, endDate);
 
-        Long scopeUserId =
-                getScopeUserId(currentUser);
+        Long scopeUserId = getScopeUserId(currentUser);
 
         List<MonthlyTrendResponse> response =
-                transactionRepository
-                        .getMonthlyTrends(
-                                scopeUserId,
-                                startDate,
-                                endDate
-                        )
+                transactionRepository.getMonthlyTrends(scopeUserId, startDate, endDate)
                         .stream()
                         .map(this::mapTrendRow)
+                        .filter(Objects::nonNull)
                         .toList();
 
-        log.info(
-                "Monthly trends fetched successfully | userId={}, trendsCount={}",
-                currentUser.getId(),
-                response.size()
-        );
+        log.info("Monthly trends fetched | userId={}, size={}", currentUser.getId(), response.size());
 
         return response;
     }
 
-    public PaginatedResponse<TransactionResponse>
-    getRecentTransactions(
-            int page,
-            int size
-    ) {
+    public PaginatedResponse<TransactionResponse> getRecentTransactions(int page, int size) {
 
-        User currentUser =
-                securityUtils.getCurrentUser();
+        User currentUser = securityUtils.getCurrentUser();
 
-        log.info(
-                "Fetching recent transactions | userId={}, page={}, size={}",
-                currentUser.getId(),
-                page,
-                size
-        );
-
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(Sort.Direction.DESC, "date")
-        );
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
 
         Page<Transaction> transactions;
 
-        /*
-         * EMPLOYEE users can only access
-         * their own transactions.
-         */
         if (securityUtils.isEmployee(currentUser)) {
 
-            log.info(
-                    "Applying employee-level restriction for recent transactions | userId={}",
-                    currentUser.getId()
-            );
+            log.info("Employee transaction scope | userId={}", currentUser.getId());
 
-            transactions =
-                    transactionRepository.findByUserId(
-                            currentUser.getId(),
-                            pageable
-                    );
+            transactions = transactionRepository.findByUserId(currentUser.getId(), pageable);
 
         } else {
 
-            log.info(
-                    "Admin-level access granted for recent transactions | userId={}",
-                    currentUser.getId()
-            );
+            log.info("Admin transaction scope | userId={}", currentUser.getId());
 
-            transactions =
-                    transactionRepository.findAll(
-                            pageable
-                    );
+            transactions = transactionRepository.findAll(pageable);
         }
 
         Page<TransactionResponse> responsePage =
-                transactions.map(
-                        transactionMapper::toResponse
-                );
+                transactions.map(transactionMapper::toResponse);
 
-        log.info(
-                "Recent transactions fetched successfully | userId={}, totalElements={}",
-                currentUser.getId(),
-                responsePage.getTotalElements()
-        );
-
-        return PaginatedResponse
-                .<TransactionResponse>builder()
+        return PaginatedResponse.<TransactionResponse>builder()
                 .content(responsePage.getContent())
                 .page(responsePage.getNumber())
                 .size(responsePage.getSize())
-                .totalElements(
-                        responsePage.getTotalElements()
-                )
-                .totalPages(
-                        responsePage.getTotalPages()
-                )
+                .totalElements(responsePage.getTotalElements())
+                .totalPages(responsePage.getTotalPages())
                 .first(responsePage.isFirst())
                 .last(responsePage.isLast())
                 .build();
     }
 
-    private CategorySummaryResponse mapCategoryRow(
-            Object[] row
-    ) {
+    private CategorySummaryResponse mapCategoryRow(Object[] row) {
 
-        CategorySummaryResponse response =
-                new CategorySummaryResponse();
+        if (row == null || row.length < 3) return null;
 
-        response.setCategory(
-                (String) row[0]
-        );
+        CategorySummaryResponse response = new CategorySummaryResponse();
 
-        if (row[1] instanceof RecordType recordType) {
-            response.setType(recordType);
+        response.setCategory((String) row[0]);
+
+        if (row[1] instanceof RecordType type) {
+            response.setType(type);
         }
 
-        response.setTotal(
-                toDouble(row[2])
-        );
+        response.setTotal(toDouble(row[2]));
 
         return response;
     }
 
-    private MonthlyTrendResponse mapTrendRow(
-            Object[] row
-    ) {
+    private MonthlyTrendResponse mapTrendRow(Object[] row) {
 
-        int year =
-                ((Number) row[0]).intValue();
+        if (row == null || row.length < 4) return null;
 
-        int month =
-                ((Number) row[1]).intValue();
+        if (row[0] == null || row[1] == null) {
+            log.warn("Skipping invalid trend row due to null year/month");
+            return null;
+        }
 
-        MonthlyTrendResponse response =
-                new MonthlyTrendResponse();
+        MonthlyTrendResponse response = new MonthlyTrendResponse();
 
-        response.setMonth(
-                String.format("%d-%02d", year, month)
-        );
+        int year = ((Number) row[0]).intValue();
+        int month = ((Number) row[1]).intValue();
 
-        response.setTotalIncome(
-                toDouble(row[2])
-        );
-
-        response.setTotalExpense(
-                toDouble(row[3])
-        );
+        response.setMonth(String.format("%d-%02d", year, month));
+        response.setTotalIncome(toDouble(row[2]));
+        response.setTotalExpense(toDouble(row[3]));
 
         return response;
     }
 
-    private static double defaultZero(
-            Double value
-    ) {
-
-        return value == null
-                ? 0d
-                : value;
+    private static double defaultZero(Double value) {
+        return value == null ? 0d : value;
     }
 
-    private static double toDouble(
-            Object value
-    ) {
-
-        if (value == null) {
-            return 0d;
-        }
+    private static double toDouble(Object value) {
 
         if (value instanceof Number number) {
             return number.doubleValue();
@@ -359,24 +206,11 @@ public class AnalyticsService {
         return 0d;
     }
 
-    private void validateDateRange(
-            LocalDate start,
-            LocalDate end
-    ) {
+    private void validateDateRange(LocalDate start, LocalDate end) {
 
-        if (start != null
-                && end != null
-                && start.isAfter(end)) {
-
-            log.error(
-                    "Invalid date range | startDate={}, endDate={}",
-                    start,
-                    end
-            );
-
-            throw new BadRequestException(
-                    "Start date cannot be after end date"
-            );
+        if (start != null && end != null && start.isAfter(end)) {
+            log.error("Invalid date range | start={}, end={}", start, end);
+            throw new BadRequestException("Start date cannot be after end date");
         }
     }
 }

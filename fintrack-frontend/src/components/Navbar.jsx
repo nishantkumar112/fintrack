@@ -1,61 +1,145 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
+import {Link, useNavigate} from 'react-router-dom';
+import {useAuth} from '../context/AuthContext';
+import {useTheme} from '../context/ThemeContext';
+import {useEffect, useState, useCallback} from 'react';
+import {
+  getNotifications,
+  getUnreadCount,
+  markAsRead as markNotificationAsRead,
+} from '../services/notificationService';
 
-const Navbar = ({ onMenuClick }) => {
-  const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+import {Bell} from 'lucide-react';
 
-  const handleLogout = () => {
-    logout();
+const Navbar = ({onMenuClick}) => {
+  const {user, logout} = useAuth();
+  const {theme, toggleTheme} = useTheme();
+  const navigate = useNavigate();
+
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const handleLogout = () => logout();
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await getUnreadCount();
+      setUnreadCount(res?.data ?? 0);
+    } catch {
+      setUnreadCount(0);
+    }
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await getNotifications(0, 10, false);
+      setNotifications(res?.data?.content ?? []);
+    } catch {
+      setNotifications([]);
+    }
+  }, []);
+
+  const openDropdown = async () => {
+    setOpen(true);
+    await fetchNotifications();
   };
 
-  const handleThemeKeyDown = (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      toggleTheme();
+  const closeDropdown = () => {
+    setOpen(false);
+  };
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      await markNotificationAsRead(notification.id);
+
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notification.id ? {...n, readStatus: true} : n,
+        ),
+      );
+
+      setUnreadCount((prev) => Math.max(prev - 1, 0));
+
+      if (notification.redirectUrl) {
+        navigate(notification.redirectUrl);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-      <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
+    <header className="sticky top-0 z-40 border-b bg-white dark:bg-slate-950">
+      <div className="flex justify-between items-center p-4">
+        {/* LEFT */}
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="inline-flex rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden dark:text-slate-300 dark:hover:bg-slate-800"
-            aria-label="Open navigation menu"
-            onClick={onMenuClick}
-          >
-            <span className="text-xl" aria-hidden>
-              ☰
-            </span>
-          </button>
-          <Link to="/dashboard" className="text-lg font-semibold text-slate-900 dark:text-white">
+          <button onClick={onMenuClick}>☰</button>
+
+          <Link to="/dashboard" className="font-bold">
             FinTrack
           </Link>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* RIGHT */}
+        <div className="flex items-center gap-4 relative">
+          {/* NOTIFICATIONS */}
           <div
-            role="button"
-            tabIndex={0}
-            onClick={toggleTheme}
-            onKeyDown={handleThemeKeyDown}
-            className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            className="relative"
+            onMouseEnter={openDropdown}
+            onMouseLeave={closeDropdown}
           >
-            {theme === "dark" ? "Light" : "Dark"}
+            <button className="relative p-2 rounded-md hover:bg-gray-100 dark:hover:bg-slate-800">
+              <Bell className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {open && (
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 shadow-lg border rounded-lg overflow-hidden">
+                <div className="p-3 border-b font-semibold">Notifications</div>
+
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">
+                      No notifications
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={`p-3 cursor-pointer border-b hover:bg-gray-100 dark:hover:bg-slate-800 ${
+                          !n.readStatus ? 'bg-gray-50 dark:bg-slate-800' : ''
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{n.title}</div>
+                        <div className="text-xs text-gray-500">{n.message}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-300">
-            {user?.email || user?.firstName || "User"}
-          </span>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
-          >
-            Log out
+
+          {/* THEME */}
+          <button onClick={toggleTheme}>
+            {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
+
+          {/* USER */}
+          <span>{user?.email || 'User'}</span>
+
+          {/* LOGOUT */}
+          <button onClick={handleLogout}>Logout</button>
         </div>
       </div>
     </header>

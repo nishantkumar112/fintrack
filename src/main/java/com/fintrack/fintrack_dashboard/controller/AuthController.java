@@ -4,7 +4,7 @@ import com.fintrack.fintrack_dashboard.dto.auth.*;
 import com.fintrack.fintrack_dashboard.dto.user.UserResponse;
 import com.fintrack.fintrack_dashboard.entity.User;
 import com.fintrack.fintrack_dashboard.mapper.UserMapper;
-import com.fintrack.fintrack_dashboard.service.AuthService;
+import com.fintrack.fintrack_dashboard.service.authorization.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final AuthService authService;
+    private final      AuthService authService;
     private final UserMapper userMapper;
 
     public AuthController(AuthService authService, UserMapper userMapper) {

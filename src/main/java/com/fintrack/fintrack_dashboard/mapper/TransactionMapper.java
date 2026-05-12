@@ -17,7 +17,6 @@ public class TransactionMapper {
         transaction.setCategory(request.getCategory());
         transaction.setDescription(request.getDescription());
         transaction.setDate(request.getTransactionDate());
-
         return transaction;
     }
 
@@ -32,6 +31,8 @@ public class TransactionMapper {
         response.setDescription(transaction.getDescription());
         response.setTransactionDate(transaction.getDate());
         response.setStatus(transaction.getStatus());
+        response.setCreatedAt(transaction.getCreatedAt());
+        response.setUpdatedAt(transaction.getUpdatedAt());
 
         return response;
     }

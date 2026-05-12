@@ -1,4 +1,4 @@
-package com.fintrack.fintrack_dashboard.service;
+package com.fintrack.fintrack_dashboard.service.transaction;
 
 import com.fintrack.fintrack_dashboard.entity.Transaction;
 import com.fintrack.fintrack_dashboard.dto.transaction.TransactionFilterRequest;

@@ -1,0 +1,22 @@
+package com.fintrack.fintrack_dashboard.constant;
+
+public enum NotificationType {
+
+    TRANSACTION_CREATED,
+
+    TRANSACTION_UPDATED,
+
+    TRANSACTION_DELETED,
+
+    TRANSACTION_APPROVED,
+
+    TRANSACTION_REJECTED,
+
+    USER_CREATED,
+
+    USER_UPDATED,
+
+    PASSWORD_CHANGED,
+
+    TRANSACTION_PENDING_APPROVAL, USER_DELETED, LOGIN_SUCCESS, LOGIN_ALERT
+}

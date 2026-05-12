@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -38,4 +39,8 @@ public class Transaction {
     private User user;
 
     private String description;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

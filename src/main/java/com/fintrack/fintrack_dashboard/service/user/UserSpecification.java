@@ -1,4 +1,4 @@
-package com.fintrack.fintrack_dashboard.service;
+package com.fintrack.fintrack_dashboard.service.user;
 
 import com.fintrack.fintrack_dashboard.entity.User;
 import com.fintrack.fintrack_dashboard.dto.user.UserFilterRequest;

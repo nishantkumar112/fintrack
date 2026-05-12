@@ -1,8 +1,8 @@
 package com.fintrack.fintrack_dashboard.controller;
 
 import com.fintrack.fintrack_dashboard.dto.user.*;
-import com.fintrack.fintrack_dashboard.service.UserService;
-import org.springframework.data.domain.Page;
+import com.fintrack.fintrack_dashboard.service.user.UserService;
+import com.fintrack.fintrack_dashboard.dto.common.PaginatedResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,14 +24,30 @@ public class UserController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public Page<UserResponse> getUsers(
+    public PaginatedResponse<UserResponse> getUsers(
+
             UserFilterRequest filter,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction
+
+            @RequestParam(defaultValue = "0")
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            int size,
+
+            @RequestParam(defaultValue = "id")
+            String sortBy,
+
+            @RequestParam(defaultValue = "asc")
+            String direction
     ) {
-        return userService.getUsers(filter, page, size, sortBy, direction);
+
+        return userService.getUsers(
+                filter,
+                page,
+                size,
+                sortBy,
+                direction
+        );
     }
 
     @GetMapping("/{id}")

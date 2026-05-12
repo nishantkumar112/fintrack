@@ -6,10 +6,10 @@ import com.fintrack.fintrack_dashboard.constant.TransactionStatus;
 import com.fintrack.fintrack_dashboard.dto.transaction.CreateTransactionRequest;
 import com.fintrack.fintrack_dashboard.dto.transaction.TransactionFilterRequest;
 import com.fintrack.fintrack_dashboard.dto.transaction.TransactionResponse;
-import com.fintrack.fintrack_dashboard.service.TransactionService;
+import com.fintrack.fintrack_dashboard.service.transaction.TransactionService;
 import com.fintrack.fintrack_dashboard.service.export.ExportService;
 import com.fintrack.fintrack_dashboard.service.export.TransactionExporter;
-import org.springframework.data.domain.Page;
+import com.fintrack.fintrack_dashboard.dto.common.PaginatedResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +41,7 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<TransactionResponse>> getTransactions(
+    public PaginatedResponse<TransactionResponse> getTransactions(
 
             @RequestParam(required = false) RecordType type,
             @RequestParam(required = false) String category,
@@ -50,7 +50,6 @@ public class TransactionController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate startDate,
-
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate endDate,
@@ -66,9 +65,7 @@ public class TransactionController {
         filter.setStartDate(startDate);
         filter.setEndDate(endDate);
 
-        return ResponseEntity.ok(
-                transactionService.getTransactions(filter, page, size)
-        );
+        return transactionService.getTransactions(filter, page, size);
     }
 
     @GetMapping("/{id}")

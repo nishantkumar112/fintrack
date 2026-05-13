@@ -6,9 +6,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long>,
@@ -61,5 +63,15 @@ WHERE t.type = 'EXPENSE'
             """)
     List<Object[]> getMonthlyTrends(Long userId, LocalDate startDate, LocalDate endDate);
 
+    @Query("""
+    SELECT t
+    FROM Transaction t
+    WHERE t.status = 'PENDING'
+    AND t.createdAt <= :cutoff
+""")
+    List<Transaction> findOldPendingTransactions(
+            @Param("cutoff")
+            LocalDateTime cutoff
+    );
     List<Transaction> findTop5ByUserIdOrderByDateDesc(Long userId);
 }

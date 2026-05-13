@@ -35,4 +35,7 @@ build/
 target/
 *.log
 .env
-application.properties
+.env.*
+application-dev.properties
+application-prod.properties
+.DS_Store

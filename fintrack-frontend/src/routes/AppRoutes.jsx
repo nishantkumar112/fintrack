@@ -1,14 +1,15 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import ProtectedRoute from "../components/ProtectedRoute";
-import MainLayout from "../layouts/MainLayout";
-import AuthLayout from "../layouts/AuthLayout";
-import LoginPage from "../pages/LoginPage";
-import SignupPage from "../pages/SignupPage";
-import DashboardPage from "../pages/DashboardPage";
-import TransactionsPage from "../pages/TransactionsPage";
-import UsersPage from "../pages/UsersPage";
-import ProfilePage from "../pages/ProfilePage";
-import { ROLES } from "../utils/rbac";
+import {Navigate, Route, Routes} from 'react-router-dom';
+import ProtectedRoute from '../components/ProtectedRoute';
+import MainLayout from '../layouts/MainLayout';
+import AuthLayout from '../layouts/AuthLayout';
+import LoginPage from '../pages/LoginPage';
+import SignupPage from '../pages/SignupPage';
+import DashboardPage from '../pages/DashboardPage';
+import TransactionsPage from '../pages/TransactionsPage';
+import OAuthSuccessPage from '../pages/OAuthSuccessPage';
+import UsersPage from '../pages/UsersPage';
+import ProfilePage from '../pages/ProfilePage';
+import {ROLES} from '../utils/rbac';
 
 const AppRoutes = () => {
   return (
@@ -16,6 +17,7 @@ const AppRoutes = () => {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/oauth-success" element={<OAuthSuccessPage />} />
       </Route>
 
       <Route

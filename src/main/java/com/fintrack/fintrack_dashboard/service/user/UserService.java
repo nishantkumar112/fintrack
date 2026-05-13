@@ -1,6 +1,7 @@
 package com.fintrack.fintrack_dashboard.service.user;
 
 import com.fintrack.fintrack_dashboard.constant.NotificationType;
+import com.fintrack.fintrack_dashboard.constant.Role;
 import com.fintrack.fintrack_dashboard.dto.common.PaginatedResponse;
 import com.fintrack.fintrack_dashboard.dto.user.CreateUserRequest;
 import com.fintrack.fintrack_dashboard.dto.user.UserFilterRequest;
@@ -338,6 +339,27 @@ public class UserService {
                     return new ResourceNotFoundException(
                             "User not found"
                     );
+                });
+    }
+
+    public User createOAuthUserIfNotExists(
+            String email,
+            String name
+    ) {
+
+        return userRepository.findByEmail(email)
+                .orElseGet(() -> {
+
+                    User user = new User();
+
+                    user.setEmail(email);
+                    user.setName(name);
+
+                    user.setPassword("");
+
+                    user.setRole(Role.EMPLOYEE);
+
+                    return userRepository.save(user);
                 });
     }
 }

@@ -42,11 +42,11 @@ public class AnalyticsService {
     private Long getScopeUserId(User user) {
 
         if (securityUtils.isEmployee(user)) {
-            log.info("Employee scope applied | userId={}", user.getId());
+//            log.info("Employee scope applied | userId={}", user.getId());
             return user.getId();
         }
 
-        log.info("Admin scope applied | userId={}", user.getId());
+//        log.info("Admin scope applied | userId={}", user.getId());
         return null;
     }
 

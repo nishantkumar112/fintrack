@@ -1,20 +1,31 @@
-import api from "./api";
-import { normalizeAuthPayload } from "../utils/jwt";
+import api from './api';
 
-export const loginRequest = async (credentials) => {
-  const res = await api.post("/auth/login", credentials);
-  return normalizeAuthPayload(res.data);
+export const loginRequest = async (payload) => {
+  const response = await api.post('/auth/login', payload);
+
+  return response.data;
 };
 
 export const signupRequest = async (payload) => {
-  const res = await api.post("/auth/signup", payload);
-  if (res.data?.accessToken || res.data?.token) {
-    return normalizeAuthPayload(res.data);
-  }
-  return res.data;
+  const response = await api.post('/auth/signup', payload);
+
+  return response.data;
 };
 
-export const fetchCurrentUser = async () => {
-  const res = await api.get("/auth/me");
-  return res.data;
+export const fetchCurrentUser = async (tokenOverride) => {
+  const config = tokenOverride
+    ? {
+        headers: {
+          Authorization: `Bearer ${tokenOverride}`,
+        },
+      }
+    : {};
+
+  const response = await api.get('/auth/me', config);
+
+  return response.data;
+};
+
+export const logoutRequest = async (payload) => {
+  return api.post('/auth/logout', payload);
 };

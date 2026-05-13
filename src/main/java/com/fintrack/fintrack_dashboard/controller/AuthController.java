@@ -34,7 +34,44 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse>
+    refreshToken(
+            @RequestBody RefreshTokenRequest request
+    ) {
 
+        return ResponseEntity.ok(
+                authService.refreshToken(request)
+        );
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+
+        authService.logout();
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(
+            @RequestBody ForgotPasswordRequest request
+    ) {
+
+        authService.forgotPassword(request);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(
+            @RequestBody ResetPasswordRequest request
+    ) {
+
+        authService.resetPassword(request);
+
+        return ResponseEntity.ok().build();
+    }
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me() {

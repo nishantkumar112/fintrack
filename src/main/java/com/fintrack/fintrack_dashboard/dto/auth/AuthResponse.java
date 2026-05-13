@@ -1,17 +1,20 @@
 package com.fintrack.fintrack_dashboard.dto.auth;
 
-import lombok.Data;
+import com.fintrack.fintrack_dashboard.dto.user.UserResponse;
+import lombok.*;
 
-import java.time.LocalDateTime;
-
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class AuthResponse {
-    private String token;
-    private LocalDateTime createdAt;
-    public AuthResponse(String token) {
-        this.token = token;
-    }
 
-    public String getToken() {
-        return token;
-    }
+    private String accessToken;
+
+    private String refreshToken;
+
+    private String tokenType;
+
+    private UserResponse user;
 }

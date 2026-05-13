@@ -1,21 +1,30 @@
-import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useToast } from "../context/ToastContext";
-import FormInput from "../components/FormInput";
+import {useState} from 'react';
+
+import {Link, Navigate, useNavigate} from 'react-router-dom';
+
+import {FcGoogle} from 'react-icons/fc';
+
+import {useAuth} from '../context/AuthContext';
+import {useToast} from '../context/ToastContext';
+
+import FormInput from '../components/FormInput';
 
 const SignupPage = () => {
-  const { signup, isAuthenticated, bootstrapping } = useAuth();
-  const { success, error: showError } = useToast();
+  const {signup, isAuthenticated, bootstrapping} = useAuth();
+
+  const {success, error: showError} = useToast();
+
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
   });
+
   const [submitting, setSubmitting] = useState(false);
+
   const [fieldErrors, setFieldErrors] = useState({});
 
   if (!bootstrapping && isAuthenticated) {
@@ -23,23 +32,54 @@ const SignupPage = () => {
   }
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-    setFieldErrors((er) => ({ ...er, [name]: "" }));
+    const {name, value} = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: '',
+    }));
+  };
+
+  const validateForm = () => {
+    const errors = {};
+
+    if (!form.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    }
+
+    if (!form.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    }
+
+    if (!form.email.trim()) {
+      errors.email = 'Email is required';
+    }
+
+    if (!form.password.trim()) {
+      errors.password = 'Password is required';
+    } else if (form.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    setFieldErrors(errors);
+
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const nextErrors = {};
-    if (!form.firstName.trim()) nextErrors.firstName = "First name is required";
-    if (!form.lastName.trim()) nextErrors.lastName = "Last name is required";
-    if (!form.email.trim()) nextErrors.email = "Email is required";
-    if (!form.password || form.password.length < 6)
-      nextErrors.password = "Password must be at least 6 characters";
-    setFieldErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+
+    if (!validateForm()) {
+      return;
+    }
 
     setSubmitting(true);
+
     try {
       const result = await signup({
         firstName: form.firstName.trim(),
@@ -47,32 +87,81 @@ const SignupPage = () => {
         email: form.email.trim(),
         password: form.password,
       });
-      if (result.autoLoggedIn) {
-        success("Account created. You're signed in.");
-        navigate("/dashboard", { replace: true });
+
+      if (result?.autoLoggedIn) {
+        success('Account created successfully');
+
+        navigate('/dashboard', {
+          replace: true,
+        });
       } else {
-        success("Account created. Please sign in.");
-        navigate("/login", { replace: true });
+        success('Signup successful. Please login.');
+
+        navigate('/login', {
+          replace: true,
+        });
       }
     } catch (err) {
-      const msg =
+      const message =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        err.message ||
-        "Signup failed";
-      showError(typeof msg === "string" ? msg : "Signup failed");
+        'Signup failed';
+
+      showError(message);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleGoogleSignup = () => {
+    window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+  };
+
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-8 shadow-xl backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create account</h1>
-      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Join FinTrack to manage transactions and analytics.
-      </p>
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
+    <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-8 shadow-2xl backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+          Create account
+        </h1>
+
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          Create your FinTrack account to manage expenses and analytics.
+        </p>
+      </div>
+
+      {/* GOOGLE */}
+
+      <button
+        type="button"
+        onClick={handleGoogleSignup}
+        className="
+          flex w-full items-center justify-center gap-3
+          rounded-2xl border border-slate-300 bg-white
+          px-4 py-3 text-sm font-medium text-slate-700
+          transition hover:bg-slate-50
+          dark:border-slate-700 dark:bg-slate-900
+          dark:text-slate-200 dark:hover:bg-slate-800
+        "
+      >
+        <FcGoogle className="text-xl" />
+        Continue with Google
+      </button>
+
+      {/* DIVIDER */}
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+
+        <span className="text-xs uppercase tracking-wide text-slate-400">
+          OR
+        </span>
+
+        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+      </div>
+
+      {/* FORM */}
+
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormInput
             label="First name"
@@ -80,50 +169,66 @@ const SignupPage = () => {
             value={form.firstName}
             onChange={handleChange}
             error={fieldErrors.firstName}
-            autoComplete="given-name"
             required
           />
+
           <FormInput
             label="Last name"
             name="lastName"
             value={form.lastName}
             onChange={handleChange}
             error={fieldErrors.lastName}
-            autoComplete="family-name"
             required
           />
         </div>
+
         <FormInput
           label="Email"
           name="email"
           type="email"
+          autoComplete="email"
           value={form.email}
           onChange={handleChange}
           error={fieldErrors.email}
-          autoComplete="email"
           required
         />
+
         <FormInput
           label="Password"
           name="password"
           type="password"
+          autoComplete="new-password"
           value={form.password}
           onChange={handleChange}
           error={fieldErrors.password}
-          autoComplete="new-password"
           required
         />
+
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="
+            w-full rounded-2xl bg-indigo-600
+            py-3 text-sm font-semibold text-white
+            shadow-lg transition
+            hover:bg-indigo-500
+            disabled:cursor-not-allowed
+            disabled:opacity-60
+          "
         >
-          {submitting ? "Creating account…" : "Sign up"}
+          {submitting ? 'Creating account...' : 'Create account'}
         </button>
       </form>
-      <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-        Already have an account?{" "}
-        <Link className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400" to="/login">
+
+      <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
+        Already have an account?{' '}
+        <Link
+          to="/login"
+          className="
+            font-semibold text-indigo-600
+            hover:underline dark:text-indigo-400
+          "
+        >
           Sign in
         </Link>
       </p>

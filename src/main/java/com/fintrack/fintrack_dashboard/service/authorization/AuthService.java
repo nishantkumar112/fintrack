@@ -3,19 +3,26 @@ package com.fintrack.fintrack_dashboard.service.authorization;
 import com.fintrack.fintrack_dashboard.constant.NotificationType;
 import com.fintrack.fintrack_dashboard.constant.Role;
 import com.fintrack.fintrack_dashboard.constant.UserStatus;
-import com.fintrack.fintrack_dashboard.dto.auth.AuthResponse;
-import com.fintrack.fintrack_dashboard.dto.auth.LoginRequest;
-import com.fintrack.fintrack_dashboard.dto.auth.SignupRequest;
+import com.fintrack.fintrack_dashboard.dto.auth.*;
+import com.fintrack.fintrack_dashboard.entity.PasswordResetToken;
+import com.fintrack.fintrack_dashboard.entity.RefreshToken;
 import com.fintrack.fintrack_dashboard.entity.User;
 import com.fintrack.fintrack_dashboard.exception.BadRequestException;
 import com.fintrack.fintrack_dashboard.mapper.UserMapper;
+import com.fintrack.fintrack_dashboard.respository.PasswordResetTokenRepository;
 import com.fintrack.fintrack_dashboard.respository.UserRepository;
 import com.fintrack.fintrack_dashboard.security.JwtUtil;
+import com.fintrack.fintrack_dashboard.service.email.EmailService;
 import com.fintrack.fintrack_dashboard.service.notification.NotificationService;
+import com.fintrack.fintrack_dashboard.utils.SecurityUtils;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -26,21 +33,31 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final SecurityUtils securityUtils;
     private final UserMapper userMapper;
     private final NotificationService notificationService;
+    private final RefreshTokenService refreshTokenService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+
+    private final EmailService emailService;
+    private PasswordResetTokenRepository refreshTokenRepository;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtUtil jwtUtil,
+            JwtUtil jwtUtil, SecurityUtils securityUtils,
             UserMapper userMapper,
-            NotificationService notificationService
+            NotificationService notificationService, RefreshTokenService refreshTokenService, PasswordResetTokenRepository passwordResetTokenRepository, EmailService emailService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.securityUtils = securityUtils;
         this.userMapper = userMapper;
         this.notificationService = notificationService;
+        this.refreshTokenService = refreshTokenService;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.emailService = emailService;
     }
 
     public AuthResponse signup(SignupRequest request) {
@@ -89,12 +106,18 @@ public class AuthService {
                 savedUser.getId()
         );
 
-        String token =
-                jwtUtil.generateToken(
-                        savedUser.getEmail()
-                );
+        String accessToken =
+                jwtUtil.generateToken(user);
 
-        return new AuthResponse(token);
+        RefreshToken refreshToken =
+                refreshTokenService.createRefreshToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .user(userMapper.toResponse(user))
+                .build();
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -158,13 +181,133 @@ public class AuthService {
                 user.getId()
         );
 
-        String token =
-                jwtUtil.generateToken(
-                        user.getEmail()
+        String accessToken =
+                jwtUtil.generateToken(user);
+
+        RefreshToken refreshToken =
+                refreshTokenService.createRefreshToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .user(userMapper.toResponse(user))
+                .build();
+    }
+
+
+    @Transactional
+    public void forgotPassword(
+            ForgotPasswordRequest request
+    ) {
+
+        userRepository.findByEmail(request.getEmail())
+                .ifPresent(user -> {
+
+                    passwordResetTokenRepository.deleteByUser(user);
+
+                    String token =
+                            UUID.randomUUID().toString();
+
+                    PasswordResetToken resetToken =
+                            PasswordResetToken.builder()
+                                    .token(token)
+                                    .user(user)
+                                    .used(false)
+                                    .createdAt(LocalDateTime.now())
+                                    .expiryDate(
+                                            LocalDateTime.now().plusMinutes(15)
+                                    )
+                                    .build();
+
+                    passwordResetTokenRepository.save(resetToken);
+
+                    String resetLink =
+                            "http://localhost:5173/reset-password?token="
+                                    + token;
+
+                    emailService.sendPasswordResetEmail(
+                            user.getEmail(),
+                            resetLink
+                    );
+                });
+    }
+
+
+    @Transactional
+    public void resetPassword(
+            ResetPasswordRequest request
+    ) {
+
+        PasswordResetToken resetToken =
+                passwordResetTokenRepository
+                        .findByToken(request.getToken())
+                        .orElseThrow(() ->
+                                new BadRequestException(
+                                        "Invalid reset token"
+                                )
+                        );
+
+        if (resetToken.isUsed()) {
+            throw new BadRequestException(
+                    "Reset token already used"
+            );
+        }
+
+        if (resetToken.getExpiryDate()
+                .isBefore(LocalDateTime.now())) {
+
+            throw new BadRequestException(
+                    "Reset token expired"
+            );
+        }
+
+        User user = resetToken.getUser();
+
+        user.setPassword(
+                passwordEncoder.encode(
+                        request.getNewPassword()
+                )
+        );
+
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+
+        passwordResetTokenRepository.save(resetToken);
+
+        refreshTokenRepository.deleteByUser(user);
+    }
+
+    public void logout() {
+
+        User currentUser =
+                securityUtils.getCurrentUser();        refreshTokenService
+                .revokeUserTokens(currentUser);
+    }
+    public AuthResponse refreshToken(
+            RefreshTokenRequest request
+    ) {
+
+        RefreshToken refreshToken =
+                refreshTokenService.verifyRefreshToken(
+                        request.getRefreshToken()
                 );
 
-        return new AuthResponse(token);
+        User user = refreshToken.getUser();
+
+        String accessToken =
+                jwtUtil.generateToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .user(userMapper.toResponse(user))
+                .build();
     }
+
+
 
     private void validateSignupRequest(
             SignupRequest request
